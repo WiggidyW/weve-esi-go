@@ -1,0 +1,14 @@
+﻿steps:
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    sed -i 's/##CLIENT_ID##/${_CLIENT_ID}/g' app.yaml
+    sed -i 's/##CLIENT_SECRET##/${_CLIENT_SECRET}/g' app.yaml
+    sed -i 's/##USER_AGENT##/${_USER_AGENT}/g' app.yaml
+    sed -i 's/##CLIENT_TIMEOUT##/${_CLIENT_TIMEOUT}/g' app.yaml
+    gcloud app deploy
+timeout: '1600s'
+options:
+  logging: CLOUD_LOGGING_ONLY
