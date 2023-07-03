@@ -96,6 +96,8 @@ func (c *CrudeClient) Request(
 		if now.Before(cache_rep.Expires) {
 			return cache_rep, nil
 		}
+	} else {
+		cache_rep = &response.EsiResponse{}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
@@ -156,6 +158,8 @@ func (c *CrudeClient) RequestHead(
 	url string,
 	auth string,
 ) (*response.EsiHeadResponse, error) {
+	// fmt.Printf("Sending HEAD request to '%s', auth: %s", url, auth)
+
 	c.Cache.LockHead(url)
 	defer c.Cache.UnlockHead(url)
 
@@ -168,6 +172,8 @@ func (c *CrudeClient) RequestHead(
 		if now.Before(cache_rep.Expires) {
 			return cache_rep, nil
 		}
+	} else {
+		cache_rep = &response.EsiHeadResponse{}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
@@ -185,6 +191,8 @@ func (c *CrudeClient) RequestHead(
 	if err != nil {
 		return nil, HttpError{err}
 	}
+
+	// fmt.Printf("Response Headers: %v", srvr_rep.Header)
 
 	status := srvr_rep.StatusCode
 	if status != http.StatusOK {
