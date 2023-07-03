@@ -16,6 +16,8 @@ type Cache struct {
 
 func NewCache() *Cache {
 	return &Cache{
+		head_reps:  make(map[string]*response.EsiHeadResponse),
+		reps:       make(map[string]*response.EsiResponse),
 		locks:      make(map[string]*sync.Mutex),
 		head_locks: make(map[string]*sync.Mutex),
 	}
