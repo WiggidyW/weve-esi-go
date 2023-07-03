@@ -6,7 +6,11 @@ type Result[T interface{}] struct {
 }
 
 func (r Result[T]) Unwrap() (T, error) {
-	return *r.Ok, r.Err
+	if r.Ok == nil {
+		return *new(T), r.Err
+	} else {
+		return *r.Ok, r.Err
+	}
 }
 
 func ResultOk[T interface{}](ok T) Result[T] {
