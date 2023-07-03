@@ -2,7 +2,7 @@
 service: weve-esi-go
 instance_class: F1
 env_variables:
-  LISTEN_ADDRESS: 127.0.0.1:8080
+  LISTEN_ADDRESS: 0.0.0.0:8080
   # Go Duration
   CLIENT_TIMEOUT: ##CLIENT_TIMEOUT##
   # String
