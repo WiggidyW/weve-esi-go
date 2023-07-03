@@ -12,12 +12,19 @@ import (
 	"github.com/WiggidyW/weve-esi/proto"
 )
 
+var runLocal = flag.Bool("local", false, "Run using local cache")
+
 func main() {
+	flag.Parse()
 	env.Init()
 
-	run_local := flag.Bool("local", false, "Run using local cache")
+	if *runLocal {
+		fmt.Println("Starting server in local mode")
+	} else {
+		fmt.Println("Starting server")
+	}
 
-	client := client.NewClient(*run_local)
+	client := client.NewClient(*runLocal)
 	server := grpc.NewServer()
 
 	proto.RegisterWeveEsiServer(server, client)
