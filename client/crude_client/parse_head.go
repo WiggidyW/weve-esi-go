@@ -8,26 +8,26 @@ import (
 )
 
 func getEtag(rep *http.Response) (string, error) {
-	etag := rep.Header.Get("etag")
+	etag := rep.Header.Get("Etag")
 	if etag == "" {
 		return "", fmt.Errorf(
-			"'etag' missing from response headers",
+			"'Etag' missing from response headers",
 		)
 	}
 	return etag, nil
 }
 
 func getExpires(rep *http.Response) (time.Time, error) {
-	datestring := rep.Header.Get("expires")
+	datestring := rep.Header.Get("Expires")
 	if datestring == "" {
 		return time.Time{}, fmt.Errorf(
-			"'expires' missing from response headers",
+			"'Expires' missing from response headers",
 		)
 	}
 	date, err := time.Parse(time.RFC1123, datestring)
 	if err != nil {
 		return time.Time{}, fmt.Errorf(
-			"error parsing 'expires' header: %w",
+			"error parsing 'Expires' header: %w",
 			err,
 		)
 	}
@@ -35,16 +35,16 @@ func getExpires(rep *http.Response) (time.Time, error) {
 }
 
 func getPages(rep *http.Response) (int, error) {
-	pagesstring := rep.Header.Get("x-pages")
+	pagesstring := rep.Header.Get("X-Pages")
 	if pagesstring == "" {
 		return 0, fmt.Errorf(
-			"'x-pages' missing from response headers",
+			"'X-Pages' missing from response headers",
 		)
 	}
 	pages, err := strconv.Atoi(pagesstring)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"error parsing 'x-pages' header: %w",
+			"error parsing 'X-Pages' header: %w",
 			err,
 		)
 	}
