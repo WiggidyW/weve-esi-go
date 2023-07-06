@@ -6,7 +6,6 @@ import (
 	"github.com/WiggidyW/weve-esi/client/crude_client"
 	"github.com/WiggidyW/weve-esi/client/crude_client/response"
 	"github.com/WiggidyW/weve-esi/client/db"
-	"github.com/WiggidyW/weve-esi/proto"
 )
 
 const NULL_AUTH = ""
@@ -14,7 +13,7 @@ const NULL_AUTH = ""
 type Client struct {
 	Inner *crude_client.CrudeClient
 	Db    db.Db
-	proto.UnimplementedWeveEsiServer
+	// proto.UnimplementedWeveEsiServer
 }
 
 func NewClient(run_local bool) *Client {

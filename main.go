@@ -1,15 +1,15 @@
 package main
 
 import (
-	"google.golang.org/grpc"
+	"github.com/rs/cors"
 
 	"flag"
 	"fmt"
-	"net"
+	"net/http"
 
 	"github.com/WiggidyW/weve-esi/client"
 	"github.com/WiggidyW/weve-esi/env"
-	"github.com/WiggidyW/weve-esi/proto"
+	pb "github.com/WiggidyW/weve-esi/proto"
 )
 
 var runLocal = flag.Bool("local", false, "Run using local cache")
@@ -24,19 +24,15 @@ func main() {
 		fmt.Println("Starting server")
 	}
 
-	client := client.NewClient(*runLocal)
-	server := grpc.NewServer()
+	service := client.NewClient(*runLocal)
+	server := pb.NewWeveEsiServer(service)
 
-	proto.RegisterWeveEsiServer(server, client)
+	corsWrapper := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"POST"},
+		AllowedHeaders: []string{"Content-Type"},
+	})
+	handler := corsWrapper.Handler(server)
 
-	listener, err := net.Listen("tcp", env.LISTEN_ADDRESS)
-	if err != nil {
-		panic(fmt.Sprintf(
-			"Failed to listen on %s: %e",
-			env.LISTEN_ADDRESS,
-			err,
-		))
-	}
-
-	server.Serve(listener)
+	http.ListenAndServe(env.LISTEN_ADDRESS, handler)
 }
