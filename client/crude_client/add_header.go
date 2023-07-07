@@ -8,14 +8,20 @@ import (
 	"github.com/WiggidyW/weve-esi/env"
 )
 
-const CONTENT_TYPE = "application/json"
+const JSON_CONTENT_TYPE = "application/json"
+const WWW_CONTENT_TYPE = "application/x-www-form-urlencoded"
+const LOGIN_HOST = "login.eveonline.com"
 
 func withHeadUserAgent(req *http.Request) {
 	req.Header.Add("X-User-Agent", env.USER_AGENT)
 }
 
-func withHeadContentType(req *http.Request) {
-	req.Header.Add("Content-Type", CONTENT_TYPE)
+func withHeadJsonContentType(req *http.Request) {
+	req.Header.Add("Content-Type", JSON_CONTENT_TYPE)
+}
+
+func withHeadWwwContentType(req *http.Request) {
+	req.Header.Add("Content-Type", WWW_CONTENT_TYPE)
 }
 
 func withHeadAuthorization(req *http.Request, auth string) {
@@ -35,4 +41,8 @@ func withHeadAuthAuthorization(req *http.Request) {
 		fmt.Sprintf("%s:%s", env.CLIENT_ID, env.CLIENT_SECRET),
 	))
 	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", basic_auth))
+}
+
+func withHeadLoginHost(req *http.Request) {
+	req.Header.Add("Host", LOGIN_HOST)
 }

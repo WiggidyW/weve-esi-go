@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/WiggidyW/weve-esi/client/crude_client/cache"
@@ -47,7 +48,7 @@ func (c *CrudeClient) RequestNoCache(
 	}
 
 	withHeadUserAgent(req)
-	withHeadContentType(req)
+	withHeadJsonContentType(req)
 	withHeadAuthorization(req, auth)
 
 	srvr_rep, err := c.Client.Do(req)
@@ -60,10 +61,7 @@ func (c *CrudeClient) RequestNoCache(
 
 	status := srvr_rep.StatusCode
 	if status != http.StatusOK {
-		return nil, newStatusError(
-			srvr_rep.StatusCode,
-			srvr_rep.Status,
-		)
+		return nil, newStatusError(srvr_rep)
 	}
 
 	nocache_rep := &response.EsiResponse{}
@@ -106,7 +104,7 @@ func (c *CrudeClient) Request(
 	}
 
 	withHeadUserAgent(req)
-	withHeadContentType(req)
+	withHeadJsonContentType(req)
 	withHeadAuthorization(req, auth)
 	withHeadEtag(req, cache_rep.Etag)
 
@@ -120,10 +118,7 @@ func (c *CrudeClient) Request(
 
 	status := srvr_rep.StatusCode
 	if status != http.StatusOK && status != http.StatusNotModified {
-		return nil, newStatusError(
-			srvr_rep.StatusCode,
-			srvr_rep.Status,
-		)
+		return nil, newStatusError(srvr_rep)
 	}
 
 	cache_rep.Expires, err = getExpires(srvr_rep)
@@ -196,10 +191,7 @@ func (c *CrudeClient) RequestHead(
 
 	status := srvr_rep.StatusCode
 	if status != http.StatusOK {
-		return nil, newStatusError(
-			srvr_rep.StatusCode,
-			srvr_rep.Status,
-		)
+		return nil, newStatusError(srvr_rep)
 	}
 
 	cache_rep.Pages, err = getPages(srvr_rep)
@@ -232,19 +224,19 @@ func (c *CrudeClient) RequestAuth(
 		ctx,
 		"POST",
 		AUTH_URL,
-		bytes.NewBuffer([]byte(
-			`{"grant_type":"refresh_token","refresh_token":"`+
-				token+
-				`"}`,
-		)),
+		bytes.NewBuffer([]byte(fmt.Sprintf(
+			`grant_type=refresh_token&refresh_token=%s`,
+			url.QueryEscape(token),
+		))),
 	)
 	if err != nil {
 		return "", RequestParamsError{err}
 	}
 
 	withHeadUserAgent(req)
-	withHeadContentType(req)
+	withHeadWwwContentType(req)
 	withHeadAuthAuthorization(req)
+	withHeadLoginHost(req)
 
 	srvr_rep, err := c.Client.Do(req)
 	if err != nil {
@@ -254,7 +246,7 @@ func (c *CrudeClient) RequestAuth(
 
 	status := srvr_rep.StatusCode
 	if status != http.StatusOK {
-		return "", newStatusError(srvr_rep.StatusCode, srvr_rep.Status)
+		return "", newStatusError(srvr_rep)
 	}
 
 	auth_struct := new(authenticationResponse)
