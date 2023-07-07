@@ -13,18 +13,22 @@ import (
 const HEAD_PREFIX = "head/"
 
 type Cache struct {
-	locks      map[string]*sync.Mutex
-	head_locks map[string]*sync.Mutex
+	locks           map[string]*sync.Mutex
+	locks_lock      sync.Mutex
+	head_locks      map[string]*sync.Mutex
+	head_locks_lock sync.Mutex
 }
 
 func NewCache() *Cache {
 	return &Cache{
-		locks:      make(map[string]*sync.Mutex),
-		head_locks: make(map[string]*sync.Mutex),
+		locks:           make(map[string]*sync.Mutex),
+		locks_lock:      sync.Mutex{},
+		head_locks:      make(map[string]*sync.Mutex),
+		head_locks_lock: sync.Mutex{},
 	}
 }
 
-func lock(m map[string]*sync.Mutex, key string) {
+func lock(l *sync.Mutex, m map[string]*sync.Mutex, key string) {
 	if _, ok := m[key]; !ok {
 		m[key] = &sync.Mutex{}
 	}
@@ -33,6 +37,22 @@ func lock(m map[string]*sync.Mutex, key string) {
 
 func unlock(m map[string]*sync.Mutex, key string) {
 	m[key].Unlock()
+}
+
+func (c *Cache) Lock(key string) {
+	lock(&c.locks_lock, c.locks, key)
+}
+
+func (c *Cache) Unlock(key string) {
+	unlock(c.locks, key)
+}
+
+func (c *Cache) LockHead(key string) {
+	lock(&c.head_locks_lock, c.head_locks, key)
+}
+
+func (c *Cache) UnlockHead(key string) {
+	unlock(c.head_locks, key)
 }
 
 func get[T interface{}](
@@ -61,22 +81,6 @@ func set[T interface{}](
 		Key:    key,
 		Object: v,
 	})
-}
-
-func (c *Cache) Lock(key string) {
-	lock(c.locks, key)
-}
-
-func (c *Cache) Unlock(key string) {
-	unlock(c.locks, key)
-}
-
-func (c *Cache) LockHead(key string) {
-	lock(c.head_locks, key)
-}
-
-func (c *Cache) UnlockHead(key string) {
-	unlock(c.head_locks, key)
 }
 
 func (c *Cache) Get(
