@@ -1,6 +1,7 @@
 ﻿runtime: go120
 service: weve-esi-go
 instance_class: F1
+app_engine_apis: true
 env_variables:
   SERVE_ADDRESS: 0.0.0.0:8080
   # Go Duration
