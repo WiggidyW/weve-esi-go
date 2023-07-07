@@ -6,6 +6,7 @@ import (
 	"context"
 	"sync"
 
+	"google.golang.org/appengine"
 	"google.golang.org/appengine/memcache"
 )
 
@@ -39,7 +40,8 @@ func get[T interface{}](
 	key string,
 ) (*T, error) {
 	v := new(T)
-	_, err := memcache.Gob.Get(ctx, key, v)
+	appengineCtx := appengine.BackgroundContext()
+	_, err := memcache.Gob.Get(appengineCtx, key, v)
 	if err == nil {
 		return v, nil
 	} else if err == memcache.ErrCacheMiss {
@@ -54,7 +56,8 @@ func set[T interface{}](
 	key string,
 	v *T,
 ) error {
-	return memcache.Gob.Set(ctx, &memcache.Item{
+	appengineCtx := appengine.BackgroundContext()
+	return memcache.Gob.Set(appengineCtx, &memcache.Item{
 		Key:    key,
 		Object: v,
 	})
