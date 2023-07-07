@@ -67,7 +67,10 @@ func (c *Client) structureMarketOrdersPage(
 	}
 
 	for _, order := range orders_rep.Json {
-		chn <- ResultOk(structureMarketOrderFromJson(order))
+		type_id, is_buy, market_order := structureMarketOrderFromJson(order)
+		if type_id == req.TypeId && is_buy == req.Buy {
+			chn <- ResultOk(market_order)
+		}
 	}
 
 	chn <- ResultNull[*proto.MarketOrder]()
@@ -75,9 +78,12 @@ func (c *Client) structureMarketOrdersPage(
 
 func structureMarketOrderFromJson(
 	order map[string]interface{},
-) *proto.MarketOrder {
-	return &proto.MarketOrder{
+) (uint32, bool, *proto.MarketOrder) {
+	type_id := uint32(getValueOrPanic[float64](order, "type_id"))
+	is_buy := getValueOrPanic[bool](order, "is_buy_order")
+	market_order := &proto.MarketOrder{
 		Quantity: int64(getValueOrPanic[float64](order, "volume_remain")),
 		Price:    getValueOrPanic[float64](order, "price"),
 	}
+	return type_id, is_buy, market_order
 }
