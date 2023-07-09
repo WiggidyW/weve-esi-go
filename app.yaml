@@ -2,6 +2,13 @@
 service: weve-esi-go
 instance_class: F1
 app_engine_apis: true
+automatic_scaling:
+  target_cpu_utilization: 0.8
+  target_throughput_utilization: 0.8
+  max_concurrent_requests: 100
+  max_pending_latency: automatic
+  min_pending_latency: 1000ms
+
 env_variables:
   SERVE_ADDRESS: 0.0.0.0:8080
   # Go Duration
