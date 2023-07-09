@@ -39,9 +39,9 @@ func (e StatusError) Error() string {
 	return errstr
 }
 
-type EsiError struct {
-	Error string `json:"error"`
-}
+// type EsiError struct {
+// 	Error string `json:"error"`
+// }
 
 func newStatusError(rep *http.Response) StatusError {
 	var body_str string
