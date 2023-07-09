@@ -211,6 +211,58 @@ func CharactersCharacterIdSkills(
 	)
 }
 
+func CorporationsCorporationIdContracts(
+	corporation_id uint64,
+	page int,
+) string {
+	return fmt.Sprintf(
+		"%s/corporations/%d/contracts/?datasource=%s&page=%d",
+		BASE_URL,
+		corporation_id,
+		DATASOURCE,
+		page,
+	)
+}
+
+func CharactersCharacterIdContracts(
+	character_id uint64,
+	page int,
+) string {
+	return fmt.Sprintf(
+		"%s/characters/%d/contracts/?datasource=%s&page=%d",
+		BASE_URL,
+		character_id,
+		DATASOURCE,
+		page,
+	)
+}
+
+func CorporationsCorporationIdContractsContractIdItems(
+	corporation_id uint64,
+	contract_id int,
+) string {
+	return fmt.Sprintf(
+		"%s/corporations/%d/contracts/%d/items/?datasource=%s",
+		BASE_URL,
+		corporation_id,
+		contract_id,
+		DATASOURCE,
+	)
+}
+
+func CharactersCharacterIdContractsContractIdItems(
+	character_id uint64,
+	contract_id int,
+) string {
+	return fmt.Sprintf(
+		"%s/characters/%d/contracts/%d/items/?datasource=%s",
+		BASE_URL,
+		character_id,
+		contract_id,
+		DATASOURCE,
+	)
+}
+
 // func UniverseStationsStationId(
 // 	station_id uint64,
 // ) string {
