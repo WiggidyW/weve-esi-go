@@ -98,6 +98,8 @@ func (c *CrudeClient) Request(
 		cache_rep = &response.EsiResponse{}
 	}
 
+	fmt.Printf("Sending '%s' request to '%s'\n", method, url)
+
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
 		return nil, RequestParamsError{err}
@@ -153,8 +155,6 @@ func (c *CrudeClient) RequestHead(
 	url string,
 	auth string,
 ) (*response.EsiHeadResponse, error) {
-	// fmt.Printf("Sending HEAD request to '%s', auth: %s", url, auth)
-
 	c.Cache.LockHead(url)
 	defer c.Cache.UnlockHead(url)
 
@@ -170,6 +170,8 @@ func (c *CrudeClient) RequestHead(
 	} else {
 		cache_rep = &response.EsiHeadResponse{}
 	}
+
+	fmt.Printf("Sending 'HEAD' request to '%s'\n", url)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
 	if err != nil {
