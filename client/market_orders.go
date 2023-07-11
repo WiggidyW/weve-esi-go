@@ -7,6 +7,46 @@ import (
 	"github.com/WiggidyW/weve-esi/proto"
 )
 
+func (c *Client) MultiMarketOrders(
+	ctx context.Context,
+	req *proto.MultiMarketOrdersReq,
+) (*proto.MultiMarketOrdersRep, error) {
+	chn := make(chan Result[*proto.MultiMarketOrderRep])
+
+	for _, req := range req.Inner {
+		go func(
+			ctx context.Context,
+			req *proto.MarketOrdersReq,
+			chn chan Result[*proto.MultiMarketOrderRep],
+		) {
+			rep, err := c.MarketOrders(ctx, req)
+			if err != nil {
+				chn <- ResultErr[*proto.MultiMarketOrderRep](err)
+			} else {
+				chn <- ResultOk[*proto.MultiMarketOrderRep](&proto.MultiMarketOrderRep{
+					Req: req,
+					Rep: rep,
+				})
+			}
+		}(ctx, req, chn)
+	}
+
+	return_rep := new(proto.MultiMarketOrdersRep)
+	remaining := len(req.Inner)
+	for remaining > 0 {
+		result := <-chn
+		multi_rep, err := result.Unwrap()
+		if err != nil {
+			return nil, err
+		} else if multi_rep != nil {
+			return_rep.Inner = append(return_rep.Inner, multi_rep)
+		}
+		remaining--
+	}
+
+	return return_rep, nil
+}
+
 func (c *Client) MarketOrders(
 	ctx context.Context,
 	req *proto.MarketOrdersReq,
