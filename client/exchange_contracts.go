@@ -15,6 +15,12 @@ type partialExchangeContract struct {
 	ContractId       int
 	ExchangeContract *pb.ExchangeContract
 }
+
+type exchangeContractLocationData struct {
+	SystemId uint32
+	RegionId uint32
+}
+
 type itemGetter = func(
 	c *Client,
 	ctx context.Context,
@@ -35,6 +41,7 @@ func (c *Client) ExchangeContracts(
 			ctx,
 			corporation.Id,
 			corporation.Token,
+			req.IncludeItems,
 			req.ActiveOnly,
 			chn,
 		)
@@ -44,6 +51,7 @@ func (c *Client) ExchangeContracts(
 			ctx,
 			character.Id,
 			character.Token,
+			req.IncludeItems,
 			req.ActiveOnly,
 			chn,
 		)
@@ -69,6 +77,7 @@ func (c *Client) corporationExchangeContracts(
 	ctx context.Context,
 	corporation_id uint64,
 	token string,
+	include_items bool,
 	active_only bool,
 	chn chan Result[*pb.ExchangeContract],
 ) {
@@ -76,6 +85,7 @@ func (c *Client) corporationExchangeContracts(
 		ctx,
 		url.CorporationsCorporationIdContracts,
 		corporationExchangeContractItems,
+		include_items,
 		active_only,
 		corporation_id,
 		token,
@@ -87,6 +97,7 @@ func (c *Client) characterExchangeContracts(
 	ctx context.Context,
 	character_id uint64,
 	token string,
+	include_items bool,
 	active_only bool,
 	chn chan Result[*pb.ExchangeContract],
 ) {
@@ -94,6 +105,7 @@ func (c *Client) characterExchangeContracts(
 		ctx,
 		url.CharactersCharacterIdContracts,
 		characterExchangeContractItems,
+		include_items,
 		active_only,
 		character_id,
 		token,
@@ -105,6 +117,7 @@ func (c *Client) exchangeContracts(
 	ctx context.Context,
 	url_getter func(uint64, int) string,
 	item_getter itemGetter,
+	include_items bool,
 	active_only bool,
 	entity_id uint64,
 	token string,
@@ -133,6 +146,7 @@ func (c *Client) exchangeContracts(
 			ctx,
 			url_getter,
 			item_getter,
+			include_items,
 			active_only,
 			entity_id,
 			page_chn,
@@ -161,6 +175,7 @@ func (c *Client) exchangeContractsPage(
 	ctx context.Context,
 	url_getter func(uint64, int) string,
 	item_getter itemGetter,
+	include_items bool,
 	active_only bool,
 	entity_id uint64,
 	chn chan Result[*pb.ExchangeContract],
@@ -196,21 +211,15 @@ func (c *Client) exchangeContractsPage(
 		// Send out a request for the items in the contract
 		num_contracts++
 		partial_contract := partialExchangeContractFromJson(json_contract)
-		go func(
-			ctx context.Context,
-			partial_contract *partialExchangeContract,
-			entity_id uint64,
-			auth string,
-			chn chan Result[*pb.ExchangeContract],
-		) {
-			items, err := item_getter(c, ctx, entity_id, partial_contract.ContractId, auth)
-			if err != nil {
-				chn <- ResultErr[*pb.ExchangeContract](err)
-				return
-			}
-			partial_contract.ExchangeContract.Items = items
-			chn <- ResultOk[*pb.ExchangeContract](partial_contract.ExchangeContract)
-		}(ctx, partial_contract, entity_id, auth, items_chn)
+		go c.exchangeContractsContract(
+			ctx,
+			item_getter,
+			include_items,
+			partial_contract,
+			entity_id,
+			auth,
+			items_chn,
+		)
 	}
 
 	// Wait for all the items to come back
@@ -227,6 +236,107 @@ func (c *Client) exchangeContractsPage(
 	}
 
 	chn <- ResultNull[*pb.ExchangeContract]()
+}
+
+func (c *Client) exchangeContractsContract(
+	ctx context.Context,
+	item_getter itemGetter,
+	include_items bool,
+	partial_contract *partialExchangeContract,
+	entity_id uint64,
+	auth string,
+	chn chan Result[*pb.ExchangeContract],
+) {
+	location_chn := make(chan Result[*exchangeContractLocationData])
+	go c.exchangeContractsLocationData(
+		ctx,
+		partial_contract.ExchangeContract.LocationId,
+		auth,
+		location_chn,
+	)
+
+	if include_items {
+		item_chn := make(chan Result[*[]*pb.ExchangeContractItem])
+		go func(
+			c *Client,
+			ctx context.Context,
+			item_getter itemGetter,
+			entity_id uint64,
+			contract_id int,
+			auth string,
+			item_chn chan Result[*[]*pb.ExchangeContractItem],
+		) {
+			items, err := item_getter(c, ctx, entity_id, contract_id, auth)
+			if err != nil {
+				item_chn <- ResultErr[*[]*pb.ExchangeContractItem](err)
+			} else {
+				item_chn <- ResultOk(&items)
+			}
+		}(
+			c,
+			ctx,
+			item_getter,
+			entity_id,
+			partial_contract.ContractId,
+			auth,
+			item_chn,
+		)
+		items_rep := <-item_chn
+		items, err := items_rep.Unwrap()
+		if err != nil {
+			chn <- ResultErr[*pb.ExchangeContract](err)
+			return
+		} else {
+			partial_contract.ExchangeContract.Items = *items
+		}
+	}
+
+	location_rep := <-location_chn
+	location_data, err := location_rep.Unwrap()
+	if err != nil {
+		chn <- ResultErr[*pb.ExchangeContract](err)
+		return
+	} else {
+		partial_contract.ExchangeContract.SystemId = location_data.SystemId
+		partial_contract.ExchangeContract.RegionId = location_data.RegionId
+	}
+
+	chn <- ResultOk[*pb.ExchangeContract](partial_contract.ExchangeContract)
+}
+
+func (c *Client) exchangeContractsLocationData(
+	ctx context.Context,
+	location_id uint64,
+	auth string,
+	chn chan Result[*exchangeContractLocationData],
+) {
+	// Get the system ID
+	first_digit := u64FirstDigit(location_id)
+	var system_id uint32
+	var err error
+	if first_digit == 1 {
+		// Get it from ESI as it's a structure
+		system_id, err = c.structureSystemId(ctx, location_id, auth)
+	} else if first_digit == 6 {
+		// Get it from static DB as it's a station
+		system_id, err = c.dbGetStationSystemId(ctx, location_id)
+	}
+	if err != nil {
+		chn <- ResultErr[*exchangeContractLocationData](err)
+		return
+	}
+
+	// Get the region ID
+	region_id, err := c.dbGetSystemRegionId(ctx, system_id)
+	if err != nil {
+		chn <- ResultErr[*exchangeContractLocationData](err)
+		return
+	}
+
+	chn <- ResultOk(&exchangeContractLocationData{
+		SystemId: system_id,
+		RegionId: region_id,
+	})
 }
 
 func partialExchangeContractFromJson(

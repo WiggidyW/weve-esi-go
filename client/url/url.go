@@ -263,6 +263,17 @@ func CharactersCharacterIdContractsContractIdItems(
 	)
 }
 
+func UniverseStructuresStructureId(
+	structure_id uint64,
+) string {
+	return fmt.Sprintf(
+		"%s/universe/structures/%d/?datasource=%s",
+		BASE_URL,
+		structure_id,
+		DATASOURCE,
+	)
+}
+
 // func UniverseStationsStationId(
 // 	station_id uint64,
 // ) string {
