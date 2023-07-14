@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/rs/cors"
 
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"net/http"
@@ -23,6 +24,8 @@ func main() {
 	} else {
 		fmt.Println("Starting server")
 	}
+
+	gob.Register(map[string]interface{}{})
 
 	service := client.NewClient(*runLocal)
 	server := pb.NewWeveEsiServer(service)

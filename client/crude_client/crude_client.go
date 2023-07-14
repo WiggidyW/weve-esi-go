@@ -211,7 +211,9 @@ func (c *CrudeClient) RequestNoArray(
 				err,
 			)}
 		}
-		cache_rep.Json = []map[string]interface{}{*no_array_json}
+		array_json := make([]map[string]interface{}, 1)
+		array_json[0] = *no_array_json
+		cache_rep.Json = array_json
 		cache_rep.Etag, err = getEtag(srvr_rep)
 		if err != nil {
 			return nil, MalformedResponse{err}
