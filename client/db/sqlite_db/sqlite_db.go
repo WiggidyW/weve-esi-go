@@ -37,3 +37,35 @@ func (d *Db) GetRegionId(
 	}
 	return region_id, nil
 }
+
+func (d *Db) GetStationSystemId(
+	ctx context.Context,
+	station_id uint64,
+) (uint32, error) {
+	var system_id uint32
+	err := d.QueryRowContext(
+		ctx,
+		"SELECT system_id FROM v2_stations WHERE station_id = ?",
+		station_id,
+	).Scan(&system_id)
+	if err != nil {
+		return 0, err
+	}
+	return system_id, nil
+}
+
+func (d *Db) GetSystemRegionId(
+	ctx context.Context,
+	system_id uint32,
+) (uint32, error) {
+	var region_id uint32
+	err := d.QueryRowContext(
+		ctx,
+		"SELECT region_id FROM v2_systems WHERE system_id = ?",
+		system_id,
+	).Scan(&region_id)
+	if err != nil {
+		return 0, err
+	}
+	return region_id, nil
+}
