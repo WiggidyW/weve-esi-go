@@ -150,6 +150,82 @@ func (c *CrudeClient) Request(
 	return cache_rep, nil
 }
 
+func (c *CrudeClient) RequestNoArray(
+	ctx context.Context,
+	url string,
+	method string,
+	auth string,
+) (*response.EsiResponse, error) {
+	c.Cache.Lock(url)
+	defer c.Cache.Unlock(url)
+
+	cache_rep, err := c.Cache.Get(ctx, url)
+	if err != nil {
+		return nil, CacheGetError{err}
+	}
+	if cache_rep != nil {
+		now := time.Now()
+		if now.Before(cache_rep.Expires) {
+			return cache_rep, nil
+		}
+	} else {
+		cache_rep = &response.EsiResponse{}
+	}
+
+	fmt.Printf("Sending '%s' request to '%s'\n", method, url)
+
+	req, err := http.NewRequestWithContext(ctx, method, url, nil)
+	if err != nil {
+		return nil, RequestParamsError{err}
+	}
+
+	withHeadUserAgent(req)
+	withHeadJsonContentType(req)
+	withHeadAuthorization(req, auth)
+	withHeadEtag(req, cache_rep.Etag)
+
+	srvr_rep, err := c.Client.Do(req)
+	if srvr_rep != nil {
+		defer srvr_rep.Body.Close()
+	}
+	if err != nil {
+		return nil, HttpError{err}
+	}
+
+	status := srvr_rep.StatusCode
+	if status != http.StatusOK && status != http.StatusNotModified {
+		return nil, newStatusError(srvr_rep)
+	}
+
+	cache_rep.Expires, err = getExpires(srvr_rep)
+	if err != nil {
+		return nil, MalformedResponse{err}
+	}
+
+	if status != http.StatusNotModified {
+		no_array_json := new(map[string]interface{})
+		err = json.NewDecoder(srvr_rep.Body).Decode(no_array_json)
+		if err != nil {
+			return nil, MalformedResponse{fmt.Errorf(
+				"error decoding response body as json: %w",
+				err,
+			)}
+		}
+		cache_rep.Json = []map[string]interface{}{*no_array_json}
+		cache_rep.Etag, err = getEtag(srvr_rep)
+		if err != nil {
+			return nil, MalformedResponse{err}
+		}
+	}
+
+	err = c.Cache.Set(ctx, url, cache_rep)
+	if err != nil {
+		return cache_rep, CacheSetError{err} // rep is correct, but has not been placed into the cache
+	}
+
+	return cache_rep, nil
+}
+
 func (c *CrudeClient) RequestHead(
 	ctx context.Context,
 	url string,

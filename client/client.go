@@ -41,6 +41,15 @@ func (c *Client) crudeRequest(
 	return c.Inner.Request(ctx, url, method, auth)
 }
 
+func (c *Client) crudeRequestNoArray(
+	ctx context.Context,
+	url string,
+	method string,
+	auth string,
+) (*response.EsiResponse, error) {
+	return c.Inner.RequestNoArray(ctx, url, method, auth)
+}
+
 func (c *Client) crudeRequestHead(
 	ctx context.Context,
 	url string,
@@ -61,4 +70,18 @@ func (c *Client) dbGetRegionId(
 	system_id uint64,
 ) (int, error) {
 	return c.Db.GetRegionId(ctx, system_id)
+}
+
+func (c *Client) dbGetStationSystemId(
+	ctx context.Context,
+	station_id uint64,
+) (uint32, error) {
+	return c.Db.GetStationSystemId(ctx, station_id)
+}
+
+func (c *Client) dbGetSystemRegionId(
+	ctx context.Context,
+	system_id uint32,
+) (uint32, error) {
+	return c.Db.GetSystemRegionId(ctx, system_id)
 }
