@@ -20,6 +20,12 @@ type EsiResponse struct {
 	Expires time.Time
 }
 
+type EsiResponseNoArray struct {
+	Json    map[string]interface{}
+	Etag    string
+	Expires time.Time
+}
+
 // func (r *EsiResponse) StationSystemId() int {
 // 	return int(r.Json.(map[string]interface{})["system_id"].(float64))
 // }
