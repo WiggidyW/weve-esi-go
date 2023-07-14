@@ -29,6 +29,8 @@ func NewCache() *Cache {
 }
 
 func lock(l *sync.Mutex, m map[string]*sync.Mutex, key string) {
+	l.Lock()
+	defer l.Unlock()
 	if _, ok := m[key]; !ok {
 		m[key] = &sync.Mutex{}
 	}
