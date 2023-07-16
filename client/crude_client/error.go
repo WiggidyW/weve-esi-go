@@ -18,6 +18,7 @@ type MalformedResponse struct{ error }
 
 type StatusError struct {
 	Url      string
+	Code     int
 	CodeText string
 	EsiText  string
 }
@@ -53,6 +54,7 @@ func newStatusError(rep *http.Response) StatusError {
 	}
 	return StatusError{
 		Url:      rep.Request.URL.String(),
+		Code:     rep.StatusCode,
 		CodeText: rep.Status,
 		EsiText:  body_str,
 	}
