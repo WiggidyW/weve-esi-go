@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/WiggidyW/weve-esi/client/crude_client"
 	"github.com/WiggidyW/weve-esi/client/url"
 	pb "github.com/WiggidyW/weve-esi/proto"
 )
@@ -41,6 +42,7 @@ func (c *Client) ExchangeContracts(
 			ctx,
 			corporation.Id,
 			corporation.Token,
+			req.StructureToken,
 			req.IncludeItems,
 			req.ActiveOnly,
 			chn,
@@ -51,6 +53,7 @@ func (c *Client) ExchangeContracts(
 			ctx,
 			character.Id,
 			character.Token,
+			req.StructureToken,
 			req.IncludeItems,
 			req.ActiveOnly,
 			chn,
@@ -77,6 +80,7 @@ func (c *Client) corporationExchangeContracts(
 	ctx context.Context,
 	corporation_id uint64,
 	token string,
+	structure_token string,
 	include_items bool,
 	active_only bool,
 	chn chan Result[*pb.ExchangeContract],
@@ -89,6 +93,7 @@ func (c *Client) corporationExchangeContracts(
 		active_only,
 		corporation_id,
 		token,
+		structure_token,
 		chn,
 	)
 }
@@ -97,6 +102,7 @@ func (c *Client) characterExchangeContracts(
 	ctx context.Context,
 	character_id uint64,
 	token string,
+	structure_token string,
 	include_items bool,
 	active_only bool,
 	chn chan Result[*pb.ExchangeContract],
@@ -109,6 +115,7 @@ func (c *Client) characterExchangeContracts(
 		active_only,
 		character_id,
 		token,
+		structure_token,
 		chn,
 	)
 }
@@ -121,12 +128,23 @@ func (c *Client) exchangeContracts(
 	active_only bool,
 	entity_id uint64,
 	token string,
+	structure_token string,
 	chn chan Result[*pb.ExchangeContract],
 ) {
+	var structure_auth string
 	auth, err := c.crudeRequestAuth(ctx, token)
 	if err != nil {
 		chn <- ResultErr[*pb.ExchangeContract](err)
 		return
+	}
+	if structure_token == "" {
+		structure_auth = auth
+	} else {
+		structure_auth, err = c.crudeRequestAuth(ctx, structure_token)
+		if err != nil {
+			chn <- ResultErr[*pb.ExchangeContract](err)
+			return
+		}
 	}
 
 	pages_rep, err := c.crudeRequestHead(
@@ -152,6 +170,7 @@ func (c *Client) exchangeContracts(
 			page_chn,
 			page,
 			auth,
+			structure_auth,
 		)
 	}
 
@@ -181,6 +200,7 @@ func (c *Client) exchangeContractsPage(
 	chn chan Result[*pb.ExchangeContract],
 	page int,
 	auth string,
+	structure_auth string,
 ) {
 	ec_contracts_rep, err := c.crudeRequest(
 		ctx,
@@ -218,6 +238,7 @@ func (c *Client) exchangeContractsPage(
 			partial_contract,
 			entity_id,
 			auth,
+			structure_auth,
 			items_chn,
 		)
 	}
@@ -245,13 +266,14 @@ func (c *Client) exchangeContractsContract(
 	partial_contract *partialExchangeContract,
 	entity_id uint64,
 	auth string,
+	structure_auth string,
 	chn chan Result[*pb.ExchangeContract],
 ) {
 	location_chn := make(chan Result[*exchangeContractLocationData])
 	go c.exchangeContractsLocationData(
 		ctx,
 		partial_contract.ExchangeContract.LocationId,
-		auth,
+		structure_auth,
 		location_chn,
 	)
 
@@ -317,6 +339,18 @@ func (c *Client) exchangeContractsLocationData(
 	if first_digit == 1 {
 		// Get it from ESI as it's a structure
 		system_id, err = c.structureSystemId(ctx, location_id, auth)
+		// Check if it's a status error
+		if err != nil {
+			esi_err, ok := err.(crude_client.StatusError)
+			if ok && esi_err.Code == http.StatusForbidden {
+				// If it is, return 0,0
+				chn <- ResultOk(&exchangeContractLocationData{
+					SystemId: 0,
+					RegionId: 0,
+				})
+			}
+		}
+
 	} else if first_digit == 6 {
 		// Get it from static DB as it's a station
 		system_id, err = c.dbGetStationSystemId(ctx, location_id)
